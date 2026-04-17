@@ -9,7 +9,7 @@ This project demonstrates not only the technical depth of full-stack development
 ## 🌐 Live Demo
 
 🔗 [Frontend Live Link](https://your-vercel-link.com)  
-📂 [GitHub Repository](https://github.com/shribhagwan7/greencart)
+📂 [GitHub Repository]
 
 ## 🔧 Tech Stack
 
@@ -82,7 +82,7 @@ During this project, I enhanced my skills in:
 ### Installation (Frontend)
 
 ```bash
-git clone https://github.com/shribhagwan7/greencart.git
+git clone githublink
 cd greencart
 npm install
 npm run dev
