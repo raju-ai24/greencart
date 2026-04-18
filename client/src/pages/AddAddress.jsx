@@ -5,11 +5,13 @@ import { useAppContext } from '../context/AppContext'
 import toast from 'react-hot-toast'
 
 const InputField = ({ type, placeholder, name, handleChange, address }) => (
-    <input className='w-full px-2 py-2.5 border border-gray-500/30 rounded outline-none text-gray-500 focus:border-primary transition'
+    <input 
+        className='w-full px-2 py-2.5 border border-gray-500/30 rounded outline-none text-gray-500 focus:border-primary transition'
         type={type}
         placeholder={placeholder}
         onChange={handleChange}
         name={name}
+        id={name}
         value={address[name]}
         required
     />
@@ -17,7 +19,7 @@ const InputField = ({ type, placeholder, name, handleChange, address }) => (
 
 const AddAddress = () => {
 
-    const { axios, user, navigate } = useAppContext();
+    const { axios, user, navigate, setShowUserLogin } = useAppContext();
 
     const [address, setAddress] = useState({
         firstName: '',
@@ -42,7 +44,11 @@ const AddAddress = () => {
     const onSubmitHandler = async (e) => {
         e.preventDefault();
         try {
-            const { data } = await axios.post('/api/address/add', { address });
+            const addressData = {
+                ...address,
+                zipcode: Number(address.zipcode)
+            };
+            const { data } = await axios.post('/api/address/add', { address: addressData });
 
             if (data.success) {
                 toast.success(data.message)
@@ -57,9 +63,9 @@ const AddAddress = () => {
 
     useEffect(() => {
         if (!user) {
-            navigate('/cart')
+            setShowUserLogin(true)
         }
-    }, [])
+    }, [user, setShowUserLogin])
 
     return (
         <div className='mt-16 pb-16'>

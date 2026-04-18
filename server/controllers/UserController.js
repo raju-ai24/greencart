@@ -1,6 +1,7 @@
 import User from "../models/User.js";
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
+import { v2 as cloudinary } from 'cloudinary';
 
 // Register User : /api/user/register
 export const register = async (req, res) => {
@@ -82,6 +83,32 @@ export const isAuth = async (req, res) => {
     }
 };
 
+
+// Upload Profile Image: /api/user/upload-image
+export const uploadProfileImage = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const imageFile = req.file;
+        
+        if (!imageFile) {
+            return res.json({ success: false, message: "No image file provided" });
+        }
+
+        // Upload image to Cloudinary
+        const result = await cloudinary.uploader.upload(imageFile.path, {
+            resource_type: 'image',
+            folder: 'profile_images'
+        });
+
+        const imageUrl = result.secure_url;
+
+        await User.findByIdAndUpdate(userId, { profileImage: imageUrl });
+        
+        res.json({ success: true, message: "Profile image updated successfully", imageUrl });
+    } catch (error) {
+        res.json({ success: false, message: error.message });
+    }
+};
 
 // Logout user: /api/user/logout
 export const logout = async (req, res) => {

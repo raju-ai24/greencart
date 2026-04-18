@@ -5,6 +5,7 @@ const userSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     cartItems: { type: Object, default: {} },
+    profileImage: { type: String, default: '' },
 }, { minimize: false })
 
 const User = mongoose.models.user || mongoose.model('user', userSchema)

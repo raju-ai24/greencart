@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAppContext } from "../context/AppContext";
-import { assets, dummyAddress } from "../assets/assets";
+import { assets } from "../assets/assets";
 import toast from "react-hot-toast";
 
 const Cart = () => {
@@ -23,8 +23,9 @@ const Cart = () => {
     const [showAddress, setShowAddress] = useState(false);
     const [selectedAddress, setSelectedAddress] = useState(null);
     const [paymentOption, setPaymentOption] = useState("COD");
+    const [loading, setLoading] = useState(false);
 
-    const getCart = () => {
+    const getCart = useCallback(() => {
         let tempArray = [];
         for (const key in cartItems) {
             const product = products.find((item) => item._id === key);
@@ -34,9 +35,9 @@ const Cart = () => {
             }
         }
         setCartArray(tempArray);
-    };
+    }, [cartItems, products]);
 
-    const getUserAddress = async () => {
+    const getUserAddress = useCallback(async () => {
         try {
             const { data } = await axios.get('/api/address/get');
             if (data.success) {
@@ -50,7 +51,7 @@ const Cart = () => {
         } catch (error) {
             toast.error(error.message)
         }
-    }
+    }, [axios]);
 
     const placeOrder = async () => {
         try {
@@ -58,11 +59,14 @@ const Cart = () => {
                 return toast.error("Please select an address")
             }
 
+            setLoading(true);
+            const orderItems = cartArray.map(item => ({ product: item._id, quantity: item.quantity }));
+
             // Place Order with COD
             if (paymentOption === "COD") {
                 const { data } = await axios.post('/api/order/cod', {
                     userId: user._id,
-                    items: cartArray.map(item => ({ product: item._id, quantity: item.quantity })),
+                    items: orderItems,
                     address: selectedAddress._id
                 })
 
@@ -74,8 +78,95 @@ const Cart = () => {
                     toast.error(data.message)
                 }
             }
+            // Place Order with Stripe
+            else if (paymentOption === "Stripe") {
+                const { data } = await axios.post('/api/order/stripe', {
+                    items: orderItems,
+                    address: selectedAddress._id
+                })
+
+                if (data.success) {
+                    // Load Stripe.js and redirect to Checkout
+                    const stripeScript = document.createElement('script');
+                    stripeScript.src = 'https://js.stripe.com/v3/';
+                    stripeScript.onload = () => {
+                        const stripe = window.Stripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+                        stripe.redirectToCheckout({ sessionId: data.sessionId }).then((result) => {
+                            if (result.error) {
+                                toast.error(result.error.message);
+                                setLoading(false);
+                            }
+                        });
+                    };
+                    document.body.appendChild(stripeScript);
+                } else {
+                    toast.error(data.message);
+                    setLoading(false);
+                }
+            }
+            // Place Order with Razorpay
+            else if (paymentOption === "Razorpay") {
+                const { data } = await axios.post('/api/order/razorpay', {
+                    items: orderItems,
+                    address: selectedAddress._id
+                })
+
+                if (data.success) {
+                    // Load Razorpay
+                    const razorpayScript = document.createElement('script');
+                    razorpayScript.src = 'https://checkout.razorpay.com/v1/checkout.js';
+                    razorpayScript.onload = () => {
+                        const options = {
+                            key: data.key,
+                            amount: data.amount * 100,
+                            currency: 'INR',
+                            name: 'GreenCart',
+                            description: 'Order Payment',
+                            order_id: data.orderId,
+                            handler: async function (response) {
+                                try {
+                                    const verifyData = await axios.post('/api/order/razorpay/verify', {
+                                        razorpayOrderId: response.razorpay_order_id,
+                                        razorpayPaymentId: response.razorpay_payment_id,
+                                        razorpaySignature: response.razorpay_signature,
+                                        items: orderItems,
+                                        address: selectedAddress._id,
+                                        amount: data.amount
+                                    });
+
+                                    if (verifyData.data.success) {
+                                        toast.success(verifyData.data.message);
+                                        setCartItems({});
+                                        navigate('/my-orders');
+                                    } else {
+                                        toast.error(verifyData.data.message);
+                                    }
+                                } catch (error) {
+                                    toast.error(error.message);
+                                }
+                                setLoading(false);
+                            },
+                            prefill: {
+                                name: user?.name || '',
+                                email: user?.email || '',
+                            },
+                            theme: {
+                                color: '#3399cc'
+                            }
+                        };
+
+                        const rzp = new window.Razorpay(options);
+                        rzp.open();
+                    };
+                    document.body.appendChild(razorpayScript);
+                } else {
+                    toast.error(data.message);
+                    setLoading(false);
+                }
+            }
         } catch (error) {
             toast.error(error.message)
+            setLoading(false);
         }
     };
 
@@ -83,13 +174,13 @@ const Cart = () => {
         if (products.length > 0 && cartItems) {
             getCart();
         }
-    }, [products, cartItems]);
+    }, [products, cartItems, getCart]);
 
     useEffect(() => {
         if (user) {
             getUserAddress()
         }
-    }, [user])
+    }, [user, getUserAddress])
 
     return products.length > 0 && cartItems ? (
         <div className="flex flex-col md:flex-row mt-16">
@@ -199,7 +290,8 @@ const Cart = () => {
                         className="w-full border border-gray-300 bg-white px-3 py-2 mt-2 outline-none"
                     >
                         <option value="COD">Cash On Delivery</option>
-                        <option value="Online">Online Payment</option>
+                        <option value="Stripe">Stripe Payment</option>
+                        <option value="Razorpay">Razorpay Payment</option>
                     </select>
                 </div>
 
@@ -222,9 +314,10 @@ const Cart = () => {
 
                 <button
                     onClick={placeOrder}
-                    className="w-full py-3 mt-6 cursor-pointer bg-primary text-white font-medium hover:bg-primary-dull transition"
+                    disabled={loading}
+                    className="w-full py-3 mt-6 cursor-pointer bg-primary text-white font-medium hover:bg-primary-dull transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    {paymentOption === "COD" ? "Place Order" : "Proceed to Checkout"}
+                    {loading ? "Processing..." : (paymentOption === "COD" ? "Place Order" : "Proceed to Checkout")}
                 </button>
             </div>
         </div>

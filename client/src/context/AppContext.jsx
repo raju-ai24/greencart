@@ -101,6 +101,12 @@ export const AppContextProvider = ({ children }) => {
         return totalCount;
     }
 
+    // Clear Cart
+    const clearCart = () => {
+        setCartItems({});
+        toast.success("Cart Cleared");
+    }
+
     // Get Cart Total amount
     const getCartAmount = () => {
         let totalAmount = 0;
@@ -140,7 +146,7 @@ export const AppContextProvider = ({ children }) => {
         if (!user) setCartItems({});
     }, [user]);
 
-    const value = { navigate, user, setUser, setIsSeller, isSeller, showUserLogin, setShowUserLogin, products, currency, addToCart, updateCartItem, removeFromCart, cartItems, searchQuery, setSearchQuery, getCartCount, getCartAmount, axios, fetchProducts, setCartItems };
+    const value = { navigate, user, setUser, setIsSeller, isSeller, showUserLogin, setShowUserLogin, products, currency, addToCart, updateCartItem, removeFromCart, cartItems, searchQuery, setSearchQuery, getCartCount, getCartAmount, axios, fetchProducts, setCartItems, clearCart };
 
     return <AppContext.Provider value={value}>
         {children}
