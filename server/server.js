@@ -20,7 +20,8 @@ await connectCloudinary()
 const allowedOrigins = [
     'http://localhost:5173', 
     'http://localhost:5174', 
-    process.env.FRONTEND_URL || 'https://your-frontend-url.com'
+    process.env.FRONTEND_URL || 'https://your-frontend-url.com',
+    'https://greencart-frontend-ty57.onrender.com'
 ];
 
 app.use(cors({
