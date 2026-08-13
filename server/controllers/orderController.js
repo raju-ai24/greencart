@@ -108,8 +108,8 @@ export const placeOrderStripe = async (req, res) => {
                 quantity: 1,
             }],
             mode: 'payment',
-            success_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/my-orders`,
-            cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/cart`,
+            success_url: `${process.env.FRONTEND_URL || 'https://greencart-frontend-ty57.onrender.com'}/my-orders`,
+            cancel_url: `${process.env.FRONTEND_URL || 'https://greencart-frontend-ty57.onrender.com'}/cart`,
             metadata: {
                 userId: req.user.id,
                 items: JSON.stringify(items),
